@@ -5,10 +5,11 @@ from rest_framework import status, viewsets, filters
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
+from rest_framework.permissions import IsAuthenticated
 
-from .serializers import HelloSerializer, ProfileSerializer
-from .models import UserProfile
-from .permissions import UpdateOwnProfile
+from .serializers import HelloSerializer, ProfileSerializer, ProfileFeedItemSerializer
+from .models import UserProfile, ProfileFeedItem
+from .permissions import UpdateOwnProfile, UpdateOwnStatus
 
 # Create your views here.
 class HelloApiView(APIView):
@@ -106,6 +107,22 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name', 'email')
 
+
 class UserLoginApiView(ObtainAuthToken):
     """Handles creating user authentication tokens"""
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+
+
+class ProfileFeedViewSet(viewsets.ModelViewSet):
+    """Handles creating and updating profile feeds"""
+    serializer_class = ProfileFeedItemSerializer
+    queryset = ProfileFeedItem.objects.all()
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (
+        UpdateOwnStatus,
+        IsAuthenticated
+    )
+
+    def perform_create(self, serializer):
+        """Sets the user profile to the logged in user"""
+        serializer.save(user_profile=self.request.user)
